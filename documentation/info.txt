@@ -8,6 +8,7 @@ Routes:
 
 /: Serves the HTML form for file uploads.
 /upload: Handles the file upload and merging process.
+
 Upload and Merge:
 
 The upload_files function handles the file upload. It saves the uploaded files to the UPLOAD_FOLDER.

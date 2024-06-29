@@ -1,0 +1,4 @@
+CSS:
+    non vede linee di css e js da console:
+    - non fa la grid 5x2 css
+    - progress bar js

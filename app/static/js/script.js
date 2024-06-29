@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM loaded with JavaScript');
     const form = document.getElementById('uploadForm');
     const progressBar = document.getElementById('progress-bar');
   

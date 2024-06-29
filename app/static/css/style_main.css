@@ -2,7 +2,7 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f4f4f4;
+  background-color: #d60c0c;
 }
 
 h1 {
@@ -11,12 +11,12 @@ h1 {
   margin-bottom: 20px;
 }
 
-.grid-container {
+#grid-container {
   background-color: #e00000;
-  display: grid;
+  /* display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 20px;
-  padding: 20px;
+  padding: 20px; */
 }
 
 .grid-item {

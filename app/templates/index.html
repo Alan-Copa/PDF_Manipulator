@@ -4,11 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Tools</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style_main.css') }}">
+  <!-- Link to CSS file using a relative path -->
+  <link rel="stylesheet" href="../static/css/style_main.css">
 </head>
 <body>
   <h1>PDF Tools</h1>
-  <div class="grid-container">
+  <div id="grid-container">
     <section class="grid-item">
       <h2>Upload and Merge PDFs</h2>
       <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
@@ -56,7 +57,8 @@
       <!-- Content for Compare PDF action -->
     </section>
   </div>
-  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <!-- Link to JavaScript file using a relative path -->
 </body>
 </html>
 
+<script src="../static/js/script.js"></script>
