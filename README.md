@@ -1,16 +1,14 @@
 # PDF_Manipulator
 
-This is a simple web application that merges multiple PDF files into a single PDF file.
+This is a simple web application that merges multiple PDF files into a single PDF file. Other functionalities will be added in the future.
 
 ## How to Use
 
 Running the Application:
 
-Navigate to the directory containing app.py and templates.
+Navigate to the directory app.
 Run the Flask application:
-sh
 
-Copy code
 ```
 python app.py
 ```
@@ -20,4 +18,10 @@ Testing the Application:
 Use the form to upload multiple PDF files.
 After submitting, the merged PDF should be downloaded automatically.
 
-make the text above a readme file
+## Dependencies
+
+The application requires the following Python packages:
+
+- Flask
+- PyPDF2
+- Werkzeug
