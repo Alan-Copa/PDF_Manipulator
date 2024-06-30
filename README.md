@@ -20,6 +20,7 @@ After submitting, the merged PDF should be downloaded automatically.
 
 ## Dependencies
 
+Pyhton version: 3.8.10
 The application requires the following Python packages:
 
 - Flask

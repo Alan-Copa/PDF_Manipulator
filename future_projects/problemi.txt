@@ -2,3 +2,4 @@ CSS:
     non vede linee di css e js da console:
     - non fa la grid 5x2 css
     - progress bar js
+    *** ora funziona ma il file mergiato non va piu nei download :((
