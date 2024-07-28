@@ -11,10 +11,10 @@
   <h1>PDF Tools</h1>
   <div id="grid-container">
     <section class="grid-item">
-      <h2>Upload and Merge PDFs</h2>
+      <h2>Merge PDFs</h2>
       <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
         <input type="file" name="files" id="files" multiple required>
-        <input type="submit" value="Upload and Merge">
+        <input type="submit" value="Merge">
         <div id="progress-wrapper">
           <div id="progress-bar">0%</div>
         </div>
@@ -23,6 +23,17 @@
     <section class="grid-item">
       <h2>Divide (page from to)</h2>
       <!-- Content for Divide action -->
+    </section>
+    <section class="grid-item">
+      <!-- Content for Convert to PDF action -->
+      <h2>Convert to PDF</h2>
+      <form id="uploadForm" action="/convert" method="post" enctype="multipart/form-data">
+        <input type="file" name="files" id="files" multiple required>
+        <input type="submit" value="Convert">
+        <div id="progress-wrapper">
+          <div id="progress-bar">0%</div>
+        </div>
+      </form>
     </section>
     <section class="grid-item">
       <h2>Print</h2>

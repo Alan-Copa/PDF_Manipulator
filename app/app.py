@@ -67,5 +67,11 @@ def upload_files():
     
     return send_file(merged_file_path, as_attachment=True, download_name=merged_filename)
 
+# Convert files to pdfs
+# @app.route('/upload', methods=['POST'])
+# def convert_files():
+#     return 0
+
+
 if __name__ == "__main__":
     app.run(debug=True)
