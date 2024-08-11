@@ -1,9 +1,13 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, redirect, url_for, session
 import PyPDF2
 import os
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+    
+# Load secret key from environment variable
+app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key')
+
 app.config['UPLOAD_FOLDER'] = 'database/uploads/'
 app.config['MERGED_FOLDER'] = 'database/merged/'
 app.config['COUNTER_FILE'] = 'database/merge_counter.txt'
@@ -46,7 +50,7 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
-    """Handle the file upload, merge PDFs, and return the merged file."""
+    """Handle the file upload and redirect to the merge route."""
     uploaded_files = request.files.getlist('files')
     if not uploaded_files:
         return "No files uploaded", 400
@@ -58,6 +62,18 @@ def upload_files():
         file.save(file_path)
         file_paths.append(file_path)
     
+    # Store file paths in the session
+    session['file_paths'] = file_paths
+    
+    return redirect(url_for('merge_files'))
+
+@app.route('/merge', methods=['GET'])
+def merge_files():
+    """Merge the uploaded PDFs and redirect to the download route."""
+    file_paths = session.get('file_paths', [])
+    if not file_paths:
+        return "No files to merge", 400
+    
     # Update the merge counter and create the new filename
     merge_count = update_counter()
     merged_filename = f'merged_output_{merge_count}.pdf'
@@ -65,13 +81,16 @@ def upload_files():
     
     merge_pdfs(file_paths, merged_file_path)
     
-    return send_file(merged_file_path, as_attachment=True, download_name=merged_filename)
+    return redirect(url_for('download_file', filename=merged_filename))
 
-# Convert files to pdfs
-# @app.route('/upload', methods=['POST'])
-# def convert_files():
-#     return 0
-
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    """Serve the merged PDF file for download."""
+    merged_file_path = os.path.join(app.config['MERGED_FOLDER'], filename)
+    if not os.path.exists(merged_file_path):
+        return "File not found", 404
+    
+    return send_file(merged_file_path, as_attachment=True, download_name=filename)
 
 if __name__ == "__main__":
     app.run(debug=True)
