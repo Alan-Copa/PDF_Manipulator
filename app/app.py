@@ -89,8 +89,9 @@ def download_file(filename):
     merged_file_path = os.path.join(app.config['MERGED_FOLDER'], filename)
     if not os.path.exists(merged_file_path):
         return "File not found", 404
-    
+
     return send_file(merged_file_path, as_attachment=True, download_name=filename)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
