@@ -342,4 +342,231 @@ document.addEventListener('DOMContentLoaded', function () {
             convertProgressBar.textContent = '0%';
         }
     }
+
+    // ==================== SPLIT PDF FUNCTIONALITY ====================
+    
+    let currentSplitFile = null;
+    let currentSplitFilename = null;
+    
+    // DOM Elements for Split
+    const splitUploadArea = document.getElementById('split-upload-area');
+    const splitFileInput = document.getElementById('split-file-input');
+    const splitConfigContainer = document.getElementById('split-config-container');
+    const splitFilename = document.getElementById('split-filename');
+    const splitTotalPages = document.getElementById('split-total-pages');
+    const changeSplitFileBtn = document.getElementById('change-split-file');
+    const cancelSplitBtn = document.getElementById('cancel-split-btn');
+    const executeSplitBtn = document.getElementById('execute-split-btn');
+    const splitProgressBar = document.getElementById('split-progress-bar');
+    const splitProgressWrapper = document.getElementById('split-progress-wrapper');
+    
+    // Split mode inputs
+    const splitModeRadios = document.querySelectorAll('input[name="split-mode"]');
+    const customPagesInput = document.getElementById('custom-pages-input');
+    const intervalInput = document.getElementById('interval-input');
+    const pagesInputField = document.getElementById('pages-input');
+    const intervalValueField = document.getElementById('interval-value');
+    
+    if (splitFileInput) {
+        // Split file selection
+        splitFileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleSplitFile(e.target.files[0]);
+            }
+        });
+        
+        // Click to upload
+        splitUploadArea.addEventListener('click', function() {
+            splitFileInput.click();
+        });
+        
+        // Change file button
+        changeSplitFileBtn.addEventListener('click', function() {
+            splitFileInput.click();
+        });
+        
+        // Cancel split
+        cancelSplitBtn.addEventListener('click', function() {
+            resetSplitForm();
+        });
+        
+        // Split mode change
+        splitModeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                // Hide all input containers
+                customPagesInput.style.display = 'none';
+                intervalInput.style.display = 'none';
+                
+                // Show relevant input based on mode
+                if (this.value === 'custom') {
+                    customPagesInput.style.display = 'block';
+                } else if (this.value === 'interval') {
+                    intervalInput.style.display = 'block';
+                }
+            });
+        });
+        
+        // Handle split file upload
+        function handleSplitFile(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file');
+                return;
+            }
+            
+            currentSplitFile = file;
+            
+            // Upload file to get info
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            fetch('/split/info', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                currentSplitFilename = data.temp_path;
+                splitFilename.textContent = data.filename;
+                splitTotalPages.textContent = data.pages;
+                
+                // Show config container
+                splitUploadArea.style.display = 'none';
+                splitConfigContainer.style.display = 'block';
+            })
+            .catch(error => {
+                alert('Error uploading file: ' + error);
+            });
+        }
+        
+        // Execute split
+        executeSplitBtn.addEventListener('click', function() {
+            const selectedMode = document.querySelector('input[name="split-mode"]:checked').value;
+            
+            const requestData = {
+                filename: currentSplitFilename,
+                mode: selectedMode
+            };
+            
+            // Add mode-specific data
+            if (selectedMode === 'custom') {
+                const pages = pagesInputField.value.trim();
+                if (!pages) {
+                    alert('Please enter pages to extract');
+                    return;
+                }
+                requestData.pages = pages;
+            } else if (selectedMode === 'interval') {
+                const interval = parseInt(intervalValueField.value);
+                if (!interval || interval < 1) {
+                    alert('Please enter a valid interval');
+                    return;
+                }
+                requestData.interval = interval;
+            }
+            
+            // Show progress
+            splitProgressWrapper.style.display = 'block';
+            splitProgressBar.style.width = '50%';
+            splitProgressBar.textContent = '50% - Processing...';
+            executeSplitBtn.disabled = true;
+            
+            // Execute split
+            fetch('/split/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    resetSplitProgress();
+                    return;
+                }
+                
+                // Success!
+                splitProgressBar.style.width = '100%';
+                splitProgressBar.textContent = '100% - Complete!';
+                
+                // Download files
+                if (data.files.length === 1) {
+                    // Single file - download directly
+                    window.location.href = `/split/download/${data.files[0]}`;
+                } else {
+                    // Multiple files - offer to download as zip
+                    if (confirm(`Split successful! ${data.count} files created. Download all as ZIP?`)) {
+                        downloadAllSplitFiles(data.files);
+                    } else {
+                        alert(`Files are ready. You can download them from the split folder.`);
+                    }
+                }
+                
+                // Reset form after delay
+                setTimeout(() => {
+                    resetSplitForm();
+                }, 2000);
+            })
+            .catch(error => {
+                alert('Error splitting PDF: ' + error);
+                resetSplitProgress();
+            });
+        });
+        
+        // Download all split files as zip
+        function downloadAllSplitFiles(files) {
+            fetch('/split/download_all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ files: files })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'split_pdfs.zip';
+                link.click();
+            })
+            .catch(error => {
+                alert('Error downloading files: ' + error);
+            });
+        }
+        
+        // Reset split form
+        function resetSplitForm() {
+            currentSplitFile = null;
+            currentSplitFilename = null;
+            splitFileInput.value = '';
+            pagesInputField.value = '';
+            intervalValueField.value = '1';
+            
+            // Reset radio to first option
+            document.querySelector('input[name="split-mode"][value="all"]').checked = true;
+            customPagesInput.style.display = 'none';
+            intervalInput.style.display = 'none';
+            
+            // Hide config, show upload
+            splitConfigContainer.style.display = 'none';
+            splitUploadArea.style.display = 'flex';
+            
+            resetSplitProgress();
+        }
+        
+        // Reset split progress
+        function resetSplitProgress() {
+            splitProgressWrapper.style.display = 'none';
+            splitProgressBar.style.width = '0%';
+            splitProgressBar.textContent = '0%';
+            executeSplitBtn.disabled = false;
+        }
+    }
 });

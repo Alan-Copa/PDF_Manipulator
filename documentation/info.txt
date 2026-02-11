@@ -49,3 +49,89 @@ Technical Implementation:
 - Files sent to backend in user-specified order
 - Backend merges PDFs sequentially per file order
 - Automatic cleanup of temporary uploaded files
+
+=== IMAGE TO PDF CONVERSION FEATURE (Feb 2026) ===
+
+Overview:
+- Convert image files to PDF format
+- Supports multiple image formats: JPG, JPEG, PNG, BMP, GIF
+- Single or batch conversion capability
+- High-quality conversion preserving image dimensions
+
+Supported Formats:
+✓ JPG/JPEG - Joint Photographic Experts Group
+✓ PNG - Portable Network Graphics  
+✓ BMP - Bitmap Image File
+✓ GIF - Graphics Interchange Format
+
+User Interface:
+- Drag & drop or click to select images
+- Visual upload area with format hints
+- File preview showing selected image count and names
+- Convert button appears only after file selection
+- Real-time progress indicator during conversion
+- Animated icons and smooth transitions
+
+Conversion Process:
+1. User selects one or more image files
+2. System validates file types (images only)
+3. Images uploaded to server
+4. Each image converted to individual PDF using img2pdf library
+5. Converted PDFs saved to database/converted/ folder
+6. Automatic download of converted file(s)
+7. Temporary uploaded images cleaned up automatically
+
+Technical Implementation:
+Backend (Python/Flask):
+- img2pdf library for image-to-PDF conversion
+- File validation by extension checking
+- Secure filename handling with werkzeug
+- Separate storage for converted files (database/converted/)
+- Error handling for unsupported formats
+- Automatic cleanup of temporary files
+
+Frontend (HTML/CSS/JavaScript):
+- Custom styled upload area with gradient backgrounds
+- Accept attribute limits file picker to image types
+- JavaScript shows file selection feedback
+- Progress bar with percentage display
+- Form submission via AJAX with upload tracking
+- Auto-redirect to download on completion
+
+Key Features:
+✓ Multiple file conversion in one operation
+✓ Preserves original image quality and dimensions
+✓ No image compression during conversion
+✓ Fast conversion using optimized img2pdf library
+✓ Responsive design matching app theme
+✓ Visual feedback throughout process
+✓ Error messages for invalid file types
+✓ Automatic file cleanup to save disk space
+
+Security & Validation:
+- File extension validation (whitelist approach)
+- Secure filename sanitization
+- Server-side format verification
+- Prevents non-image file uploads
+- Protected upload/download endpoints
+
+Storage Structure:
+database/
+  ├── uploads/       (temporary image storage)
+  ├── merged/        (merged PDF outputs)
+  └── converted/     (converted PDF outputs)
+
+Dependencies:
+- img2pdf: Core conversion library
+- Pillow: Image processing (img2pdf dependency)
+- Flask: Web framework
+- werkzeug: Secure filename handling
+
+Future Enhancements (Potential):
+- Merge multiple images into single PDF
+- Image compression options
+- Page orientation selection (portrait/landscape)
+- Image rotation before conversion
+- Batch download as ZIP file
+- Preview images before conversion
+- OCR text extraction option

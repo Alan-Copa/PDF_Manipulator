@@ -397,6 +397,275 @@ input[type="submit"]:hover {
   background: #c82333;
 }
 
+/* ==================== SPLIT PDF STYLES ==================== */
+
+/* Split Section */
+.split-section {
+  grid-column: 1 / -1;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.split-container {
+  width: 100%;
+}
+
+/* Split Upload Area */
+.split-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  border: 3px dashed #d60c0c;
+  border-radius: 15px;
+  background-color: #fff5f5;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  min-height: 200px;
+}
+
+.split-upload-area:hover {
+  background-color: #ffe5e5;
+  border-color: #c82333;
+  transform: scale(1.02);
+}
+
+/* Split Configuration Container */
+.split-config-container {
+  width: 100%;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 12px;
+}
+
+.split-file-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 2px solid #e9ecef;
+}
+
+.split-file-info h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.1em;
+  word-break: break-word;
+}
+
+.split-file-info p {
+  margin: 5px 0;
+  color: #666;
+}
+
+.change-file-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.change-file-btn:hover {
+  background-color: #5a6268;
+  transform: scale(1.05);
+}
+
+/* Split Mode Selector */
+.split-mode-selector {
+  margin-bottom: 20px;
+}
+
+.split-mode-selector h4 {
+  margin: 0 0 15px 0;
+  color: #d60c0c;
+  font-size: 1.1em;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: flex-start;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.radio-option:hover {
+  background-color: #fff;
+  border-color: #d60c0c;
+  box-shadow: 0 2px 8px rgba(214, 12, 12, 0.2);
+}
+
+.radio-option input[type="radio"] {
+  margin: 3px 12px 0 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #d60c0c;
+}
+
+.radio-option input[type="radio"]:checked {
+  background-color: #d60c0c;
+}
+
+.radio-option:has(input:checked) {
+  background-color: #ffe5e5;
+  border-color: #d60c0c;
+  border-width: 3px;
+}
+
+.radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.radio-content strong {
+  color: #333;
+  font-size: 1em;
+}
+
+.radio-content span {
+  color: #666;
+  font-size: 0.9em;
+}
+
+/* Split Input Containers */
+.split-input-container {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  border: 2px solid #d60c0c;
+}
+
+.split-input-container label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-weight: bold;
+}
+
+.split-input-container input[type="text"],
+.split-input-container input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+}
+
+.split-input-container input[type="text"]:focus,
+.split-input-container input[type="number"]:focus {
+  outline: none;
+  border-color: #d60c0c;
+}
+
+.split-input-container input[type="number"] {
+  width: 100px;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.split-input-container span {
+  color: #666;
+  font-size: 1em;
+}
+
+.input-hint {
+  margin-top: 8px;
+  color: #888;
+  font-size: 0.85em;
+  font-style: italic;
+}
+
+/* Split Actions */
+.split-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-btn {
+  flex: 1;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #5a6268;
+  transform: scale(1.02);
+}
+
+.split-execute-btn {
+  flex: 2;
+  background-color: #d60c0c;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: bold;
+  transition: all 0.3s ease;
+}
+
+.split-execute-btn:hover:not(:disabled) {
+  background-color: #c82333;
+  transform: scale(1.02);
+}
+
+.split-execute-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Split Progress */
+#split-progress-wrapper {
+  width: 100%;
+  background-color: #f8d7da;
+  border: 1px solid #d60c0c;
+  border-radius: 12px;
+  margin-top: 15px;
+  padding: 5px;
+}
+
+#split-progress-bar {
+  width: 0;
+  height: 30px;
+  background-color: #d60c0c;
+  color: #fff;
+  text-align: center;
+  line-height: 30px;
+  border-radius: 12px;
+  transition: width 0.3s;
+  font-weight: bold;
+}
+
 /* Convert Section Styles */
 .convert-section {
   min-height: 320px;
