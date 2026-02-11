@@ -253,4 +253,93 @@ document.addEventListener('DOMContentLoaded', function () {
 
         xhr.send(formData);
     });
+
+    // Convert Section JavaScript
+    const convertFileInput = document.getElementById('convert-file-input');
+    const convertUploadArea = document.getElementById('convert-upload-area');
+    const convertSubmitBtn = document.getElementById('convert-submit-btn');
+    const convertProgressWrapper = document.getElementById('convert-progress-wrapper');
+    const convertProgressBar = document.getElementById('convert-progress-bar');
+    const convertForm = document.getElementById('convert-form');
+
+    // File input change for convert
+    if (convertFileInput) {
+        convertFileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const fileCount = e.target.files.length;
+                const fileNames = Array.from(e.target.files).map(f => f.name).join(', ');
+                
+                // Update upload area to show selected files
+                convertUploadArea.innerHTML = `
+                    <div class="upload-icon">✓</div>
+                    <p><strong>${fileCount} image${fileCount > 1 ? 's' : ''} selected</strong></p>
+                    <p class="format-hint">${fileNames.length > 50 ? fileNames.substring(0, 50) + '...' : fileNames}</p>
+                    <label for="convert-file-input" class="file-select-btn">Change Files</label>
+                `;
+                
+                // Show the convert button
+                convertSubmitBtn.style.display = 'block';
+            }
+        });
+
+        // Make upload area clickable
+        convertUploadArea.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('file-select-btn') && e.target.tagName !== 'LABEL') {
+                convertFileInput.click();
+            }
+        });
+
+        // Handle form submission with progress
+        convertForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(convertForm);
+            const xhr = new XMLHttpRequest();
+
+            // Show progress wrapper
+            convertProgressWrapper.style.display = 'block';
+            convertSubmitBtn.disabled = true;
+            convertSubmitBtn.textContent = '🔄 Converting...';
+
+            // Upload progress
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    convertProgressBar.style.width = percentComplete + '%';
+                    convertProgressBar.textContent = percentComplete + '%';
+                }
+            });
+
+            xhr.onload = function() {
+                if (xhr.status === 200 || xhr.status === 302) {
+                    convertProgressBar.style.width = '100%';
+                    convertProgressBar.textContent = '100% - Complete!';
+                    
+                    // Redirect to download
+                    setTimeout(() => {
+                        window.location.href = xhr.responseURL;
+                    }, 500);
+                } else {
+                    alert('An error occurred during conversion: ' + xhr.responseText);
+                    resetConvertForm();
+                }
+            };
+
+            xhr.onerror = function() {
+                alert('An error occurred during conversion.');
+                resetConvertForm();
+            };
+
+            xhr.open('POST', '/convert');
+            xhr.send(formData);
+        });
+
+        function resetConvertForm() {
+            convertSubmitBtn.disabled = false;
+            convertSubmitBtn.textContent = '🔄 Convert to PDF';
+            convertProgressWrapper.style.display = 'none';
+            convertProgressBar.style.width = '0%';
+            convertProgressBar.textContent = '0%';
+        }
+    }
 });

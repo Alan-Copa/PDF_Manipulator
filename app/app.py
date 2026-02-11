@@ -10,11 +10,13 @@ app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key')
 
 app.config['UPLOAD_FOLDER'] = 'database/uploads/'
 app.config['MERGED_FOLDER'] = 'database/merged/'
+app.config['SPLIT_FOLDER'] = 'database/split/'
 app.config['COUNTER_FILE'] = 'database/merge_counter.txt'
 
-# Ensure upload and merged directories exist
+# Ensure upload, merged, and split directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MERGED_FOLDER'], exist_ok=True)
+os.makedirs(app.config['SPLIT_FOLDER'], exist_ok=True)
 
 # Initialize or load the merge counter
 def initialize_counter():
@@ -42,6 +44,95 @@ def merge_pdfs(pdf_list, output_path):
     
     with open(output_path, 'wb') as output_pdf:
         pdf_merger.write(output_pdf)
+
+def get_pdf_page_count(pdf_path):
+    """Get the number of pages in a PDF."""
+    with open(pdf_path, 'rb') as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        return len(pdf_reader.pages)
+
+def split_pdf_all_pages(pdf_path, output_folder, base_name):
+    """Split PDF into individual pages."""
+    output_files = []
+    with open(pdf_path, 'rb') as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        total_pages = len(pdf_reader.pages)
+        
+        for page_num in range(total_pages):
+            pdf_writer = PyPDF2.PdfWriter()
+            pdf_writer.add_page(pdf_reader.pages[page_num])
+            
+            output_filename = f"{base_name}_page_{page_num + 1}.pdf"
+            output_path = os.path.join(output_folder, output_filename)
+            
+            with open(output_path, 'wb') as output_file:
+                pdf_writer.write(output_file)
+            
+            output_files.append(output_filename)
+    
+    return output_files
+
+def split_pdf_custom_pages(pdf_path, output_folder, base_name, page_ranges):
+    """Split PDF by custom page ranges."""
+    output_files = []
+    with open(pdf_path, 'rb') as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        total_pages = len(pdf_reader.pages)
+        
+        for idx, page_range in enumerate(page_ranges):
+            pdf_writer = PyPDF2.PdfWriter()
+            
+            # Parse page range
+            if '-' in page_range:
+                start, end = map(int, page_range.split('-'))
+                pages = range(start - 1, min(end, total_pages))
+            else:
+                page_num = int(page_range) - 1
+                if 0 <= page_num < total_pages:
+                    pages = [page_num]
+                else:
+                    continue
+            
+            for page_num in pages:
+                if 0 <= page_num < total_pages:
+                    pdf_writer.add_page(pdf_reader.pages[page_num])
+            
+            if len(pdf_writer.pages) > 0:
+                output_filename = f"{base_name}_part_{idx + 1}.pdf"
+                output_path = os.path.join(output_folder, output_filename)
+                
+                with open(output_path, 'wb') as output_file:
+                    pdf_writer.write(output_file)
+                
+                output_files.append(output_filename)
+    
+    return output_files
+
+def split_pdf_by_interval(pdf_path, output_folder, base_name, interval):
+    """Split PDF by page interval."""
+    output_files = []
+    with open(pdf_path, 'rb') as f:
+        pdf_reader = PyPDF2.PdfReader(f)
+        total_pages = len(pdf_reader.pages)
+        
+        part = 1
+        for start_page in range(0, total_pages, interval):
+            pdf_writer = PyPDF2.PdfWriter()
+            end_page = min(start_page + interval, total_pages)
+            
+            for page_num in range(start_page, end_page):
+                pdf_writer.add_page(pdf_reader.pages[page_num])
+            
+            output_filename = f"{base_name}_part_{part}.pdf"
+            output_path = os.path.join(output_folder, output_filename)
+            
+            with open(output_path, 'wb') as output_file:
+                pdf_writer.write(output_file)
+            
+            output_files.append(output_filename)
+            part += 1
+    
+    return output_files
 
 @app.route('/')
 def index():
@@ -122,6 +213,129 @@ def download_file(filename):
         return "File not found", 404
 
     return send_file(merged_file_path, as_attachment=True, download_name=filename)
+
+@app.route('/split/info', methods=['POST'])
+def split_info():
+    """Get information about the uploaded PDF for splitting."""
+    try:
+        uploaded_file = request.files.get('file')
+        if not uploaded_file or not uploaded_file.filename.endswith('.pdf'):
+            return {"error": "Please upload a valid PDF file"}, 400
+        
+        # Save temporarily to get page count
+        filename = secure_filename(uploaded_file.filename)
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        uploaded_file.save(temp_path)
+        
+        page_count = get_pdf_page_count(temp_path)
+        
+        return {
+            "filename": filename,
+            "pages": page_count,
+            "temp_path": filename
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/split/execute', methods=['POST'])
+def split_pdf():
+    """Execute PDF splitting based on the selected mode."""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        mode = data.get('mode')
+        
+        if not filename:
+            return {"error": "No file specified"}, 400
+        
+        pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(pdf_path):
+            return {"error": "File not found"}, 404
+        
+        base_name = os.path.splitext(filename)[0]
+        output_files = []
+        
+        if mode == 'all':
+            output_files = split_pdf_all_pages(pdf_path, app.config['SPLIT_FOLDER'], base_name)
+        
+        elif mode == 'custom':
+            pages_input = data.get('pages', '')
+            if not pages_input:
+                return {"error": "Please specify pages to extract"}, 400
+            
+            # Parse pages input (e.g., "1, 3-5, 7")
+            page_ranges = [p.strip() for p in pages_input.split(',')]
+            output_files = split_pdf_custom_pages(pdf_path, app.config['SPLIT_FOLDER'], base_name, page_ranges)
+        
+        elif mode == 'interval':
+            interval = data.get('interval')
+            if not interval or interval < 1:
+                return {"error": "Please specify a valid interval"}, 400
+            
+            output_files = split_pdf_by_interval(pdf_path, app.config['SPLIT_FOLDER'], base_name, interval)
+        
+        else:
+            return {"error": "Invalid split mode"}, 400
+        
+        # Clean up uploaded file
+        try:
+            os.remove(pdf_path)
+        except:
+            pass
+        
+        if not output_files:
+            return {"error": "No files were generated"}, 400
+        
+        return {
+            "success": True,
+            "files": output_files,
+            "count": len(output_files)
+        }
+    
+    except Exception as e:
+        return {"error": str(e)}, 500
+
+@app.route('/split/download/<filename>', methods=['GET'])
+def download_split_file(filename):
+    """Download a split PDF file."""
+    split_file_path = os.path.join(app.config['SPLIT_FOLDER'], filename)
+    if not os.path.exists(split_file_path):
+        return "File not found", 404
+    
+    return send_file(split_file_path, as_attachment=True, download_name=filename)
+
+@app.route('/split/download_all', methods=['POST'])
+def download_all_split_files():
+    """Create a zip file with all split PDFs and download it."""
+    import zipfile
+    from io import BytesIO
+    
+    try:
+        data = request.get_json()
+        filenames = data.get('files', [])
+        
+        if not filenames:
+            return {"error": "No files to download"}, 400
+        
+        # Create a zip file in memory
+        memory_file = BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for filename in filenames:
+                file_path = os.path.join(app.config['SPLIT_FOLDER'], filename)
+                if os.path.exists(file_path):
+                    zf.write(file_path, filename)
+        
+        memory_file.seek(0)
+        
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='split_pdfs.zip'
+        )
+    
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 
 if __name__ == "__main__":
