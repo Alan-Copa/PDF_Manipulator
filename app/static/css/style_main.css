@@ -397,7 +397,10 @@ a {
   transform: scale(1.01);
 }
 
-.upload-area.drag-over {
+.upload-area.drag-over,
+.split-upload-area.drag-over,
+.convert-upload-area.drag-over,
+.censor-upload-area.drag-over {
   border-color: var(--primary-color);
   background: var(--primary-light);
   transform: scale(1.02);

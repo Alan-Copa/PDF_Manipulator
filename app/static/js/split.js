@@ -18,6 +18,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // File input
   splitFileInput.addEventListener('change', handleFileUpload);
+  
+  // Drag and drop for upload area
+  splitUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    splitUploadArea.classList.add('drag-over');
+  });
+  
+  splitUploadArea.addEventListener('dragleave', () => {
+    splitUploadArea.classList.remove('drag-over');
+  });
+  
+  splitUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    splitUploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) {
+      const dt = new DataTransfer();
+      dt.items.add(e.dataTransfer.files[0]);
+      splitFileInput.files = dt.files;
+      handleFileUpload({ target: { files: dt.files } });
+    }
+  });
 
   // Mode selection
   document.querySelectorAll('input[name="split-mode"]').forEach(radio => {

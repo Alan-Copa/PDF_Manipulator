@@ -69,6 +69,26 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
+  // Drag and drop for upload area
+  if (censorUploadArea) {
+    censorUploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      censorUploadArea.classList.add('drag-over');
+    });
+    
+    censorUploadArea.addEventListener('dragleave', () => {
+      censorUploadArea.classList.remove('drag-over');
+    });
+    
+    censorUploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      censorUploadArea.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) {
+        uploadPDF(e.dataTransfer.files[0]);
+      }
+    });
+  }
+  
   async function uploadPDF(file) {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
       alert('Please select a valid PDF file');

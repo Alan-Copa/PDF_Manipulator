@@ -17,6 +17,24 @@ document.addEventListener('DOMContentLoaded', function() {
   convertFileInput.addEventListener('change', function() {
     handleFiles(Array.from(this.files));
   });
+  
+  // Drag and drop for upload area
+  convertUploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    convertUploadArea.classList.add('drag-over');
+  });
+  
+  convertUploadArea.addEventListener('dragleave', () => {
+    convertUploadArea.classList.remove('drag-over');
+  });
+  
+  convertUploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    convertUploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(Array.from(e.dataTransfer.files));
+    }
+  });
 
   // Add more images button
   addMoreImagesBtn.addEventListener('click', function() {
