@@ -563,6 +563,24 @@ a {
   opacity: 0.5;
 }
 
+.file-list li.drag-over {
+  border: 2px dashed var(--primary-color);
+  background: var(--primary-light);
+  transform: scale(1.02);
+}
+
+.file-list li .drag-handle {
+  cursor: grab;
+  color: var(--text-tertiary);
+  margin-right: var(--spacing-md);
+  font-size: 1.2rem;
+  user-select: none;
+}
+
+.file-list li:active .drag-handle {
+  cursor: grabbing;
+}
+
 /* ============================================
    Action Bar
    ============================================ */
@@ -1163,6 +1181,119 @@ a {
 }
 
 /* ============================================
+   Image Preview Grid (Convert Feature)
+   ============================================ */
+.image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-lg);
+  margin: var(--spacing-xl) 0;
+}
+
+.image-preview-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-base);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.image-preview-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.image-preview-thumbnail {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--transition-slow);
+}
+
+.image-preview-card:hover .image-preview-thumbnail img {
+  transform: scale(1.05);
+}
+
+.image-preview-info {
+  padding: var(--spacing-md);
+  flex-grow: 1;
+}
+
+.image-preview-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  margin-bottom: var(--spacing-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.image-preview-size {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.image-preview-remove {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.25rem;
+  font-weight: bold;
+  transition: all var(--transition-base);
+  opacity: 0;
+  transform: scale(0.8);
+  box-shadow: var(--shadow-md);
+}
+
+.image-preview-card:hover .image-preview-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.image-preview-remove:hover {
+  background: var(--danger-hover);
+  transform: scale(1.1);
+}
+
+.image-preview-remove:active {
+  transform: scale(0.95);
+}
+
+#image-preview-container {
+  margin-top: var(--spacing-xl);
+}
+
+#clear-all-images-btn {
+  margin-top: var(--spacing-lg);
+  width: 100%;
+}
+
+/* ============================================
    Responsive Design
    ============================================ */
 @media (max-width: 768px) {
@@ -1200,6 +1331,11 @@ a {
   .btn-block-mobile {
     width: 100%;
   }
+
+  .image-preview-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+  }
 }
 
 @media (max-width: 480px) {
@@ -1223,6 +1359,19 @@ a {
   
   .tool-workspace {
     padding: var(--spacing-md);
+  }
+
+  .image-preview-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+  }
+
+  .image-preview-thumbnail {
+    height: 150px;
+  }
+
+  .image-preview-remove {
+    opacity: 1;
   }
 }
 

@@ -6,6 +6,8 @@ from werkzeug.utils import secure_filename
 import json
 from PIL import Image
 import img2pdf
+import zipfile
+import io
 
 app = Flask(__name__)
     
@@ -194,13 +196,14 @@ def unlock_page():
 
 @app.route('/convert/execute', methods=['POST'])
 def convert_images_to_pdf():
-    """Convert uploaded images to PDF."""
+    """Convert uploaded images to separate PDF files."""
+    image_paths = []
+    pdf_files = []
+    
     try:
         uploaded_files = request.files.getlist('files')
         if not uploaded_files:
             return "No files uploaded", 400
-        
-        image_paths = []
         
         # Save uploaded images
         for file in uploaded_files:
@@ -218,10 +221,10 @@ def convert_images_to_pdf():
                             # Save as temporary file if conversion was needed
                             temp_path = file_path + '_temp.jpg'
                             img.save(temp_path, 'JPEG')
-                            image_paths.append(temp_path)
+                            image_paths.append((temp_path, filename))
                             os.remove(file_path)
                         else:
-                            image_paths.append(file_path)
+                            image_paths.append((file_path, filename))
                 except Exception as e:
                     # Clean up on error
                     if os.path.exists(file_path):
@@ -231,29 +234,62 @@ def convert_images_to_pdf():
         if not image_paths:
             return "No valid image files uploaded", 400
         
-        # Generate output filename
-        output_filename = 'converted_images.pdf'
-        output_path = os.path.join(app.config['CONVERTED_FOLDER'], output_filename)
-        
-        # Convert images to PDF
-        with open(output_path, 'wb') as f:
-            f.write(img2pdf.convert(image_paths))
+        # Convert each image to a separate PDF
+        for image_path, original_filename in image_paths:
+            # Generate output filename (replace image extension with .pdf)
+            base_name = os.path.splitext(original_filename)[0]
+            pdf_filename = f"{base_name}.pdf"
+            pdf_path = os.path.join(app.config['CONVERTED_FOLDER'], pdf_filename)
+            
+            # Convert single image to PDF
+            with open(pdf_path, 'wb') as f:
+                f.write(img2pdf.convert([image_path]))
+            
+            pdf_files.append((pdf_path, pdf_filename))
         
         # Clean up uploaded images
-        for image_path in image_paths:
+        for image_path, _ in image_paths:
             try:
                 os.remove(image_path)
             except:
                 pass
         
-        # Return the PDF file
-        return send_file(output_path, as_attachment=True, download_name=output_filename)
+        # If only one image, return single PDF
+        if len(pdf_files) == 1:
+            pdf_path, pdf_filename = pdf_files[0]
+            return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
+        
+        # If multiple images, create ZIP file
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for pdf_path, pdf_filename in pdf_files:
+                zip_file.write(pdf_path, pdf_filename)
+        
+        # Clean up PDF files
+        for pdf_path, _ in pdf_files:
+            try:
+                os.remove(pdf_path)
+            except:
+                pass
+        
+        zip_buffer.seek(0)
+        return send_file(
+            zip_buffer,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='converted_images.zip'
+        )
     
     except Exception as e:
         # Clean up on error
-        for image_path in image_paths:
+        for image_path, _ in image_paths:
             try:
                 os.remove(image_path)
+            except:
+                pass
+        for pdf_path, _ in pdf_files:
+            try:
+                os.remove(pdf_path)
             except:
                 pass
         return f"Error converting images: {str(e)}", 500
@@ -307,22 +343,6 @@ def upload_files():
             except:
                 pass
         return f"Error merging PDFs: {str(e)}", 500
-
-@app.route('/merge', methods=['GET'])
-def merge_files():
-    """Merge the uploaded PDFs and redirect to the download route."""
-    file_paths = session.get('file_paths', [])
-    if not file_paths:
-        return "No files to merge", 400
-    
-    # Update the merge counter and create the new filename
-    merge_count = update_counter()
-    merged_filename = f'merged_output_{merge_count}.pdf'
-    merged_file_path = os.path.join(app.config['MERGED_FOLDER'], merged_filename)
-    
-    merge_pdfs(file_paths, merged_file_path)
-    
-    return redirect(url_for('download_file', filename=merged_filename))
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):

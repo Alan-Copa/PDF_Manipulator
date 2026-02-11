@@ -65,11 +65,77 @@ document.addEventListener('DOMContentLoaded', function() {
     fileList.innerHTML = '';
     files.forEach((file, index) => {
       const li = document.createElement('li');
+      li.draggable = true;
+      li.dataset.index = index;
       li.innerHTML = `
+        <span class="drag-handle">⋮⋮</span>
         <span>📄 ${file.name}</span>
         <button type="button" class="btn btn-secondary btn-sm" onclick="removeFile(${index})">Remove</button>
       `;
+      
+      // Drag and drop events for reordering
+      li.addEventListener('dragstart', handleDragStart);
+      li.addEventListener('dragover', handleDragOver);
+      li.addEventListener('drop', handleDrop);
+      li.addEventListener('dragend', handleDragEnd);
+      li.addEventListener('dragenter', handleDragEnter);
+      li.addEventListener('dragleave', handleDragLeave);
+      
       fileList.appendChild(li);
+    });
+  }
+
+  let draggedIndex = null;
+
+  function handleDragStart(e) {
+    draggedIndex = parseInt(e.currentTarget.dataset.index);
+    e.currentTarget.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e) {
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+  }
+
+  function handleDragEnter(e) {
+    e.currentTarget.classList.add('drag-over');
+  }
+
+  function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+
+  function handleDrop(e) {
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+    e.preventDefault();
+
+    const dropIndex = parseInt(e.currentTarget.dataset.index);
+    
+    if (draggedIndex !== dropIndex && draggedIndex !== null) {
+      // Reorder the files array
+      const draggedFile = files[draggedIndex];
+      files.splice(draggedIndex, 1);
+      files.splice(dropIndex, 0, draggedFile);
+      updateFileList();
+    }
+
+    e.currentTarget.classList.remove('drag-over');
+    return false;
+  }
+
+  function handleDragEnd(e) {
+    e.currentTarget.style.opacity = '1';
+    draggedIndex = null;
+    
+    // Remove drag-over class from all items
+    document.querySelectorAll('#file-list li').forEach(item => {
+      item.classList.remove('drag-over');
     });
   }
 
