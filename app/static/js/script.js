@@ -569,4 +569,471 @@ document.addEventListener('DOMContentLoaded', function () {
             executeSplitBtn.disabled = false;
         }
     }
+
+    // ==================== PDF CENSORING FUNCTIONALITY ====================
+    const censorSection = document.querySelector('.censor-container');
+    if (censorSection) {
+        // DOM Elements
+        const censorFileInput = document.getElementById('censor-file-input');
+        const censorUploadArea = document.getElementById('censor-upload-area');
+        const censorWorkspace = document.getElementById('censor-workspace');
+        const censorResult = document.getElementById('censor-result');
+        const censorFilename = document.getElementById('censor-filename');
+        const currentPageNum = document.getElementById('current-page-num');
+        const totalPagesNum = document.getElementById('total-pages-num');
+        const canvas = document.getElementById('censor-canvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        const canvasOverlay = document.getElementById('canvas-overlay');
+        
+        // Buttons
+        const changeCensorFileBtn = document.getElementById('change-censor-file');
+        const drawRectangleBtn = document.getElementById('draw-rectangle-btn');
+        const selectToolBtn = document.getElementById('select-tool-btn');
+        const clearSelectionBtn = document.getElementById('clear-selection-btn');
+        const searchAndMarkBtn = document.getElementById('search-and-mark-btn');
+        const prevPageBtn = document.getElementById('prev-page-btn');
+        const nextPageBtn = document.getElementById('next-page-btn');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomFitBtn = document.getElementById('zoom-fit-btn');
+        const previewRedactionBtn = document.getElementById('preview-redaction-btn');
+        const executeCensorBtn = document.getElementById('execute-censor-btn');
+        const cancelCensorBtn = document.getElementById('cancel-censor-btn');
+        const censorAnotherBtn = document.getElementById('censor-another-btn');
+        
+        // State variables
+        let currentCensorFile = null;
+        let currentCensorFilename = null;
+        let totalPages = 0;
+        let currentPage = 1;
+        let pdfPagesInfo = [];
+        let redactionZones = [];  // Array of {page, x, y, width, height}
+        let currentTool = 'rectangle';
+        let isDrawing = false;
+        let startX = 0;
+        let startY = 0;
+        let currentZoom = 1.0;
+        let canvasScale = 1.0;
+        
+        // File input handler
+        if (censorFileInput) {
+            censorFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/pdf') {
+                    uploadCensorFile(file);
+                } else {
+                    alert('Please select a valid PDF file');
+                }
+            });
+        }
+        
+        // Upload PDF for censoring
+        function uploadCensorFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            showCensorProgress('Uploading PDF...');
+            
+            fetch('/censor/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideCensorProgress();
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    return;
+                }
+                
+                currentCensorFilename = data.filename;
+                totalPages = data.total_pages;
+                pdfPagesInfo = data.pages_info;
+                currentPage = 1;
+                redactionZones = [];
+                
+                // Update UI
+                censorFilename.textContent = data.filename;
+                totalPagesNum.textContent = totalPages;
+                currentPageNum.textContent = currentPage;
+                
+                // Show workspace
+                censorUploadArea.style.display = 'none';
+                censorWorkspace.style.display = 'block';
+                
+                // Load first page
+                loadCensorPage(currentPage);
+                updateRedactionCount();
+            })
+            .catch(error => {
+                hideCensorProgress();
+                alert('Error uploading file: ' + error);
+            });
+        }
+        
+        // Load specific page on canvas
+        function loadCensorPage(pageNum) {
+            if (!currentCensorFilename) return;
+            
+            showCensorProgress('Loading page...');
+            
+            const img = new Image();
+            img.onload = function() {
+                // Set canvas size
+                canvas.width = img.width;
+                canvas.height = img.height;
+                canvasScale = img.width / (pdfPagesInfo[pageNum - 1].width);
+                
+                // Draw image
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+                
+                // Draw existing redaction zones for this page
+                drawRedactionZones();
+                
+                // Update navigation buttons
+                prevPageBtn.disabled = (pageNum === 1);
+                nextPageBtn.disabled = (pageNum === totalPages);
+                currentPageNum.textContent = pageNum;
+                
+                hideCensorProgress();
+            };
+            
+            img.onerror = function() {
+                hideCensorProgress();
+                alert('Error loading page');
+            };
+            
+            img.src = `/censor/render_page/${currentCensorFilename}/${pageNum}`;
+        }
+        
+        // Draw redaction zones on canvas
+        function drawRedactionZones() {
+            // Redraw the zones for current page
+            const zonesOnPage = redactionZones.filter(z => z.page === currentPage);
+            
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+            ctx.lineWidth = 2;
+            
+            zonesOnPage.forEach(zone => {
+                const x = zone.x * canvasScale;
+                const y = zone.y * canvasScale;
+                const w = zone.width * canvasScale;
+                const h = zone.height * canvasScale;
+                
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+            });
+        }
+        
+        // Canvas drawing handlers
+        if (canvas) {
+            canvas.addEventListener('mousedown', function(e) {
+                if (currentTool !== 'rectangle') return;
+                
+                const rect = canvas.getBoundingClientRect();
+                startX = e.clientX - rect.left;
+                startY = e.clientY - rect.top;
+                isDrawing = true;
+            });
+            
+            canvas.addEventListener('mousemove', function(e) {
+                if (!isDrawing || currentTool !== 'rectangle') return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                
+                // Reload page image
+                loadCensorPage(currentPage);
+                
+                // Draw temporary rectangle
+                const width = currentX - startX;
+                const height = currentY - startY;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.fillRect(startX, startY, width, height);
+                ctx.strokeRect(startX, startY, width, height);
+            });
+            
+            canvas.addEventListener('mouseup', function(e) {
+                if (!isDrawing || currentTool !== 'rectangle') return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const endX = e.clientX - rect.left;
+                const endY = e.clientY - rect.top;
+                
+                const width = endX - startX;
+                const height = endY - startY;
+                
+                // Only add if rectangle has meaningful size
+                if (Math.abs(width) > 5 && Math.abs(height) > 5) {
+                    // Convert canvas coordinates to PDF coordinates
+                    const pdfX = Math.min(startX, endX) / canvasScale;
+                    const pdfY = Math.min(startY, endY) / canvasScale;
+                    const pdfWidth = Math.abs(width) / canvasScale;
+                    const pdfHeight = Math.abs(height) / canvasScale;
+                    
+                    redactionZones.push({
+                        page: currentPage,
+                        x: pdfX,
+                        y: pdfY,
+                        width: pdfWidth,
+                        height: pdfHeight
+                    });
+                    
+                    updateRedactionCount();
+                }
+                
+                isDrawing = false;
+                loadCensorPage(currentPage);
+            });
+        }
+        
+        // Tool selection
+        if (drawRectangleBtn) {
+            drawRectangleBtn.addEventListener('click', function() {
+                currentTool = 'rectangle';
+                drawRectangleBtn.classList.add('active');
+                selectToolBtn.classList.remove('active');
+            });
+        }
+        
+        if (selectToolBtn) {
+            selectToolBtn.addEventListener('click', function() {
+                currentTool = 'select';
+                selectToolBtn.classList.add('active');
+                drawRectangleBtn.classList.remove('active');
+            });
+        }
+        
+        // Clear all redactions
+        if (clearSelectionBtn) {
+            clearSelectionBtn.addEventListener('click', function() {
+                if (confirm('Clear all redaction zones on all pages?')) {
+                    redactionZones = [];
+                    updateRedactionCount();
+                    loadCensorPage(currentPage);
+                }
+            });
+        }
+        
+        // Text search and mark
+        if (searchAndMarkBtn) {
+            searchAndMarkBtn.addEventListener('click', function() {
+                const searchTerm = document.getElementById('censor-search-input').value.trim();
+                
+                if (!searchTerm) {
+                    alert('Please enter text to search');
+                    return;
+                }
+                
+                showCensorProgress('Searching...');
+                
+                fetch('/censor/search_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: currentCensorFilename,
+                        search_term: searchTerm
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideCensorProgress();
+                    
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+                    
+                    // Add search results to redaction zones
+                    data.results.forEach(result => {
+                        redactionZones.push({
+                            page: result.page,
+                            x: result.x,
+                            y: result.y,
+                            width: result.width,
+                            height: result.height
+                        });
+                    });
+                    
+                    document.getElementById('search-result-count').textContent = 
+                        `Found ${data.count} instance(s)`;
+                    
+                    updateRedactionCount();
+                    loadCensorPage(currentPage);
+                })
+                .catch(error => {
+                    hideCensorProgress();
+                    alert('Error searching: ' + error);
+                });
+            });
+        }
+        
+        // Page navigation
+        if (prevPageBtn) {
+            prevPageBtn.addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadCensorPage(currentPage);
+                }
+            });
+        }
+        
+        if (nextPageBtn) {
+            nextPageBtn.addEventListener('click', function() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadCensorPage(currentPage);
+                }
+            });
+        }
+        
+        // Zoom controls (simplified)
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', function() {
+                currentZoom = Math.min(currentZoom + 0.2, 3.0);
+                document.getElementById('zoom-level').textContent = 
+                    Math.round(currentZoom * 100) + '%';
+                canvas.style.transform = `scale(${currentZoom})`;
+            });
+        }
+        
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', function() {
+                currentZoom = Math.max(currentZoom - 0.2, 0.5);
+                document.getElementById('zoom-level').textContent = 
+                    Math.round(currentZoom * 100) + '%';
+                canvas.style.transform = `scale(${currentZoom})`;
+            });
+        }
+        
+        if (zoomFitBtn) {
+            zoomFitBtn.addEventListener('click', function() {
+                currentZoom = 1.0;
+                document.getElementById('zoom-level').textContent = '100%';
+                canvas.style.transform = 'scale(1)';
+            });
+        }
+        
+        // Execute censoring
+        if (executeCensorBtn) {
+            executeCensorBtn.addEventListener('click', function() {
+                if (redactionZones.length === 0) {
+                    alert('Please mark at least one area to censor');
+                    return;
+                }
+                
+                if (!confirm(`Apply permanent censoring to ${redactionZones.length} area(s)? This cannot be undone!`)) {
+                    return;
+                }
+                
+                const removeMetadata = document.getElementById('remove-metadata-checkbox').checked;
+                const colorSelect = document.getElementById('redaction-color-select').value;
+                const color = colorSelect.split(',').map(c => parseInt(c) / 255);
+                
+                showCensorProgress('Applying permanent redactions...');
+                
+                fetch('/censor/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        filename: currentCensorFilename,
+                        redaction_zones: redactionZones,
+                        remove_metadata: removeMetadata,
+                        redaction_color: color
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideCensorProgress();
+                    
+                    if (data.error) {
+                        alert('Error: ' + data.error);
+                        return;
+                    }
+                    
+                    // Show result
+                    document.getElementById('result-redaction-count').textContent = 
+                        data.redacted_areas;
+                    
+                    const downloadLink = document.getElementById('download-censored-link');
+                    downloadLink.href = `/censor/download/${data.filename}`;
+                    downloadLink.download = data.filename;
+                    
+                    censorWorkspace.style.display = 'none';
+                    censorResult.style.display = 'block';
+                })
+                .catch(error => {
+                    hideCensorProgress();
+                    alert('Error censoring: ' + error);
+                });
+            });
+        }
+        
+        // Cancel/Reset buttons
+        if (cancelCensorBtn) {
+            cancelCensorBtn.addEventListener('click', resetCensorForm);
+        }
+        
+        if (changeCensorFileBtn) {
+            changeCensorFileBtn.addEventListener('click', resetCensorForm);
+        }
+        
+        if (censorAnotherBtn) {
+            censorAnotherBtn.addEventListener('click', resetCensorForm);
+        }
+        
+        // Helper functions
+        function updateRedactionCount() {
+            document.getElementById('redaction-count').textContent = redactionZones.length;
+        }
+        
+        function showCensorProgress(message) {
+            const progressWrapper = document.getElementById('censor-progress-wrapper');
+            const progressBar = document.getElementById('censor-progress-bar');
+            if (progressWrapper && progressBar) {
+                progressWrapper.style.display = 'block';
+                progressBar.textContent = message;
+            }
+        }
+        
+        function hideCensorProgress() {
+            const progressWrapper = document.getElementById('censor-progress-wrapper');
+            if (progressWrapper) {
+                progressWrapper.style.display = 'none';
+            }
+        }
+        
+        function resetCensorForm() {
+            currentCensorFile = null;
+            currentCensorFilename = null;
+            totalPages = 0;
+            currentPage = 1;
+            pdfPagesInfo = [];
+            redactionZones = [];
+            currentZoom = 1.0;
+            
+            if (censorFileInput) censorFileInput.value = '';
+            if (canvas) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                canvas.style.transform = 'scale(1)';
+            }
+            
+            document.getElementById('censor-search-input').value = '';
+            document.getElementById('search-result-count').textContent = '';
+            document.getElementById('zoom-level').textContent = '100%';
+            
+            censorWorkspace.style.display = 'none';
+            censorResult.style.display = 'none';
+            censorUploadArea.style.display = 'flex';
+            
+            updateRedactionCount();
+        }
+    }
 });

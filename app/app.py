@@ -1,7 +1,9 @@
-from flask import Flask, request, render_template, send_file, redirect, url_for, session
+from flask import Flask, request, render_template, send_file, redirect, url_for, session, jsonify
 import PyPDF2
+import fitz  # PyMuPDF for secure redaction
 import os
 from werkzeug.utils import secure_filename
+import json
 
 app = Flask(__name__)
     
@@ -11,12 +13,14 @@ app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key')
 app.config['UPLOAD_FOLDER'] = 'database/uploads/'
 app.config['MERGED_FOLDER'] = 'database/merged/'
 app.config['SPLIT_FOLDER'] = 'database/split/'
+app.config['CENSORED_FOLDER'] = 'database/censored/'
 app.config['COUNTER_FILE'] = 'database/merge_counter.txt'
 
-# Ensure upload, merged, and split directories exist
+# Ensure upload, merged, split, and censored directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MERGED_FOLDER'], exist_ok=True)
 os.makedirs(app.config['SPLIT_FOLDER'], exist_ok=True)
+os.makedirs(app.config['CENSORED_FOLDER'], exist_ok=True)
 
 # Initialize or load the merge counter
 def initialize_counter():
@@ -336,6 +340,294 @@ def download_all_split_files():
     
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+# ==================== PDF CENSORING ROUTES ====================
+
+@app.route('/censor/upload', methods=['POST'])
+def censor_upload():
+    """Upload PDF for censoring and return page information."""
+    try:
+        uploaded_file = request.files.get('file')
+        if not uploaded_file or not uploaded_file.filename.endswith('.pdf'):
+            return jsonify({"error": "Please upload a valid PDF file"}), 400
+        
+        filename = secure_filename(uploaded_file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        uploaded_file.save(file_path)
+        
+        # Get PDF information using PyMuPDF
+        doc = fitz.open(file_path)
+        pages_info = []
+        
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            pages_info.append({
+                "page_number": page_num + 1,
+                "width": page.rect.width,
+                "height": page.rect.height
+            })
+        
+        doc.close()
+        
+        return jsonify({
+            "success": True,
+            "filename": filename,
+            "total_pages": len(pages_info),
+            "pages_info": pages_info
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/censor/render_page/<filename>/<int:page_num>', methods=['GET'])
+def censor_render_page(filename, page_num):
+    """Render a specific page of the PDF as an image for preview."""
+    try:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        doc = fitz.open(file_path)
+        
+        if page_num < 1 or page_num > len(doc):
+            doc.close()
+            return jsonify({"error": "Invalid page number"}), 400
+        
+        page = doc[page_num - 1]
+        
+        # Render page to image (PNG) with high resolution
+        mat = fitz.Matrix(2.0, 2.0)  # 2x zoom for better quality
+        pix = page.get_pixmap(matrix=mat)
+        
+        # Save to bytes
+        img_bytes = pix.tobytes("png")
+        doc.close()
+        
+        from io import BytesIO
+        return send_file(
+            BytesIO(img_bytes),
+            mimetype='image/png',
+            as_attachment=False
+        )
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/censor/search_text', methods=['POST'])
+def censor_search_text():
+    """Search for text in the PDF and return coordinates for automatic redaction."""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        search_term = data.get('search_term', '')
+        case_sensitive = data.get('case_sensitive', False)
+        
+        if not filename or not search_term:
+            return jsonify({"error": "Filename and search term required"}), 400
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        doc = fitz.open(file_path)
+        results = []
+        
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            
+            # Search for text
+            text_instances = page.search_for(
+                search_term,
+                quads=False  # Returns rectangles instead of quads
+            )
+            
+            for rect in text_instances:
+                results.append({
+                    "page": page_num + 1,
+                    "x": rect.x0,
+                    "y": rect.y0,
+                    "width": rect.x1 - rect.x0,
+                    "height": rect.y1 - rect.y0
+                })
+        
+        doc.close()
+        
+        return jsonify({
+            "success": True,
+            "results": results,
+            "count": len(results)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/censor/execute', methods=['POST'])
+def censor_execute():
+    """Execute permanent redaction on the PDF with specified zones."""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        redaction_zones = data.get('redaction_zones', [])
+        remove_metadata = data.get('remove_metadata', True)
+        redaction_color = data.get('redaction_color', [0, 0, 0])  # RGB color for redaction
+        
+        if not filename:
+            return jsonify({"error": "Filename required"}), 400
+        
+        if not redaction_zones or len(redaction_zones) == 0:
+            return jsonify({"error": "No redaction zones specified"}), 400
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        # Open PDF with PyMuPDF
+        doc = fitz.open(file_path)
+        
+        # Group redaction zones by page for efficient processing
+        zones_by_page = {}
+        for zone in redaction_zones:
+            page_num = zone.get('page', 1)
+            if page_num not in zones_by_page:
+                zones_by_page[page_num] = []
+            zones_by_page[page_num].append(zone)
+        
+        # Apply redactions to each page
+        for page_num, zones in zones_by_page.items():
+            if page_num < 1 or page_num > len(doc):
+                continue
+            
+            page = doc[page_num - 1]
+            
+            for zone in zones:
+                # Create rectangle for redaction
+                # Coordinates are in PDF space
+                x = zone.get('x', 0)
+                y = zone.get('y', 0)
+                width = zone.get('width', 0)
+                height = zone.get('height', 0)
+                
+                rect = fitz.Rect(x, y, x + width, y + height)
+                
+                # Add redaction annotation (marks area for permanent removal)
+                page.add_redact_annot(
+                    rect,
+                    fill=redaction_color  # Color of redaction box
+                )
+            
+            # Apply all redactions on this page (permanently removes content)
+            page.apply_redactions(
+                images=fitz.PDF_REDACT_IMAGE_REMOVE,  # Remove images in redacted areas
+                graphics=fitz.PDF_REDACT_LINE_REMOVE,  # Remove graphics
+                text=fitz.PDF_REDACT_TEXT_REMOVE      # Remove text
+            )
+        
+        # Remove metadata if requested
+        if remove_metadata:
+            # Clear all metadata
+            doc.set_metadata({})
+            
+            # Remove XMP metadata
+            doc.del_xml_metadata()
+        
+        # Save censored PDF
+        base_name = os.path.splitext(filename)[0]
+        censored_filename = f"{base_name}_CENSORED.pdf"
+        censored_path = os.path.join(app.config['CENSORED_FOLDER'], censored_filename)
+        
+        # Save with garbage collection to remove deleted objects
+        doc.save(
+            censored_path,
+            garbage=4,  # Maximum garbage collection
+            deflate=True,  # Compress content streams
+            clean=True     # Clean and sanitize PDF
+        )
+        doc.close()
+        
+        # Clean up original file
+        try:
+            os.remove(file_path)
+        except:
+            pass
+        
+        return jsonify({
+            "success": True,
+            "filename": censored_filename,
+            "redacted_areas": len(redaction_zones)
+        })
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/censor/download/<filename>', methods=['GET'])
+def censor_download(filename):
+    """Download the censored PDF file."""
+    censored_path = os.path.join(app.config['CENSORED_FOLDER'], filename)
+    if not os.path.exists(censored_path):
+        return "File not found", 404
+    
+    return send_file(censored_path, as_attachment=True, download_name=filename)
+
+
+@app.route('/censor/preview', methods=['POST'])
+def censor_preview():
+    """Generate a preview of the PDF with redaction boxes overlaid (non-permanent)."""
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        page_num = data.get('page', 1)
+        redaction_zones = data.get('redaction_zones', [])
+        
+        if not filename:
+            return jsonify({"error": "Filename required"}), 400
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        doc = fitz.open(file_path)
+        
+        if page_num < 1 or page_num > len(doc):
+            doc.close()
+            return jsonify({"error": "Invalid page number"}), 400
+        
+        page = doc[page_num - 1]
+        
+        # Create a copy of the page for preview
+        mat = fitz.Matrix(2.0, 2.0)  # 2x zoom
+        pix = page.get_pixmap(matrix=mat)
+        
+        # Draw redaction boxes on the preview
+        for zone in redaction_zones:
+            if zone.get('page') == page_num:
+                x = zone.get('x', 0) * 2  # Scale for zoom
+                y = zone.get('y', 0) * 2
+                width = zone.get('width', 0) * 2
+                height = zone.get('height', 0) * 2
+                
+                # Draw black rectangle for preview
+                rect = fitz.Rect(x, y, x + width, y + height)
+                page.draw_rect(rect, color=(0, 0, 0), fill=(0, 0, 0))
+        
+        # Re-render with redactions drawn
+        pix = page.get_pixmap(matrix=mat)
+        img_bytes = pix.tobytes("png")
+        doc.close()
+        
+        from io import BytesIO
+        return send_file(
+            BytesIO(img_bytes),
+            mimetype='image/png',
+            as_attachment=False
+        )
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

@@ -168,7 +168,138 @@
         </section>
         <section class="grid-item">
           <h3>Censor PDF</h3>
-          <!-- Content for Censor PDF action -->
+          <div class="censor-container">
+            <!-- Step 1: Upload PDF -->
+            <div class="censor-upload-area" id="censor-upload-area">
+              <div class="upload-icon">🔒</div>
+              <p><strong>Upload PDF to Censor</strong></p>
+              <p class="format-hint">Permanent & Secure Redaction</p>
+              <label for="censor-file-input" class="file-select-btn">Choose PDF</label>
+              <input type="file" id="censor-file-input" accept=".pdf" style="display: none;">
+            </div>
+
+            <!-- Step 2: Censoring Interface -->
+            <div class="censor-workspace" id="censor-workspace" style="display: none;">
+              <!-- Top Controls Bar -->
+              <div class="censor-controls-bar">
+                <div class="censor-file-info">
+                  <h4 id="censor-filename">document.pdf</h4>
+                  <span class="page-info">
+                    Page <span id="current-page-num">1</span> of <span id="total-pages-num">1</span>
+                  </span>
+                </div>
+                <button type="button" class="change-file-btn" id="change-censor-file">Change File</button>
+              </div>
+
+              <!-- Tools Panel -->
+              <div class="censor-tools-panel">
+                <div class="tool-section">
+                  <h5>📐 Drawing Tools</h5>
+                  <div class="tool-buttons">
+                    <button type="button" class="tool-btn active" id="draw-rectangle-btn" data-tool="rectangle">
+                      ▭ Rectangle
+                    </button>
+                    <button type="button" class="tool-btn" id="select-tool-btn" data-tool="select">
+                      ↖ Select
+                    </button>
+                    <button type="button" class="tool-btn" id="clear-selection-btn">
+                      🗑️ Clear All
+                    </button>
+                  </div>
+                </div>
+
+                <div class="tool-section">
+                  <h5>🔍 Text Search</h5>
+                  <div class="search-controls">
+                    <input type="text" id="censor-search-input" placeholder="Search text to censor...">
+                    <button type="button" class="tool-btn" id="search-and-mark-btn">
+                      Find & Mark
+                    </button>
+                    <span class="search-results" id="search-result-count"></span>
+                  </div>
+                </div>
+
+                <div class="tool-section">
+                  <h5>⚙️ Options</h5>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="remove-metadata-checkbox" checked>
+                    Remove PDF Metadata
+                  </label>
+                  <div class="color-picker-group">
+                    <label>Redaction Color:</label>
+                    <select id="redaction-color-select">
+                      <option value="0,0,0" selected>⬛ Black</option>
+                      <option value="255,255,255">⬜ White</option>
+                      <option value="128,128,128">🔲 Gray</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="tool-section">
+                  <h5>📋 Redaction Summary</h5>
+                  <div class="redaction-stats">
+                    <span class="stat-item">
+                      <strong>Areas marked:</strong> <span id="redaction-count">0</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Canvas Area -->
+              <div class="censor-canvas-container">
+                <div class="canvas-navigation">
+                  <button type="button" class="nav-btn" id="prev-page-btn" disabled>← Previous</button>
+                  <button type="button" class="nav-btn" id="next-page-btn">Next →</button>
+                </div>
+                
+                <div class="canvas-wrapper" id="canvas-wrapper">
+                  <canvas id="censor-canvas"></canvas>
+                  <div class="canvas-overlay" id="canvas-overlay"></div>
+                </div>
+
+                <div class="zoom-controls">
+                  <button type="button" class="zoom-btn" id="zoom-out-btn">−</button>
+                  <span id="zoom-level">100%</span>
+                  <button type="button" class="zoom-btn" id="zoom-in-btn">+</button>
+                  <button type="button" class="zoom-btn" id="zoom-fit-btn">Fit</button>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="censor-actions">
+                <button type="button" class="secondary-btn" id="preview-redaction-btn">
+                  👁️ Preview
+                </button>
+                <button type="button" class="cancel-btn" id="cancel-censor-btn">
+                  Cancel
+                </button>
+                <button type="button" class="execute-btn" id="execute-censor-btn">
+                  🔒 Apply Permanent Censoring
+                </button>
+              </div>
+
+              <!-- Progress Bar -->
+              <div id="censor-progress-wrapper" style="display: none;">
+                <div id="censor-progress-bar">Processing...</div>
+              </div>
+            </div>
+
+            <!-- Step 3: Download Result -->
+            <div class="censor-result" id="censor-result" style="display: none;">
+              <div class="success-icon">✅</div>
+              <h4>PDF Successfully Censored!</h4>
+              <p class="result-info">
+                <strong>Redacted Areas:</strong> <span id="result-redaction-count">0</span><br>
+                <strong>Security:</strong> Content permanently removed
+              </p>
+              <a id="download-censored-link" class="download-btn" download>
+                ⬇️ Download Censored PDF
+              </a>
+              <button type="button" class="secondary-btn" id="censor-another-btn">
+                Censor Another PDF
+              </button>
+            </div>
+          </div>
         </section>
         <section class="grid-item">
           <h3>Compare PDFs</h3>
