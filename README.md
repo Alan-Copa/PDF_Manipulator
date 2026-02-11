@@ -10,6 +10,7 @@ Navigate to the directory app.
 Run the Flask application:
 
 ```
+conda activate PDF_Manipulator
 python app.py
 ```
 

@@ -50,22 +50,53 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
-    """Handle the file upload and redirect to the merge route."""
+    """Handle the file upload and merge PDFs directly, returning the merged file."""
     uploaded_files = request.files.getlist('files')
     if not uploaded_files:
         return "No files uploaded", 400
     
+    if len(uploaded_files) < 2:
+        return "At least 2 PDF files are required to merge", 400
+    
     file_paths = []
-    for file in uploaded_files:
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        file_paths.append(file_path)
+    try:
+        # Save uploaded files maintaining the order
+        for file in uploaded_files:
+            if file and file.filename.endswith('.pdf'):
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                file_paths.append(file_path)
+        
+        if len(file_paths) < 2:
+            return "At least 2 valid PDF files are required", 400
+        
+        # Update the merge counter and create the new filename
+        merge_count = update_counter()
+        merged_filename = f'merged_output_{merge_count}.pdf'
+        merged_file_path = os.path.join(app.config['MERGED_FOLDER'], merged_filename)
+        
+        # Merge PDFs in the order they were uploaded
+        merge_pdfs(file_paths, merged_file_path)
+        
+        # Clean up uploaded files
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+            except:
+                pass
+        
+        # Return the merged file directly
+        return send_file(merged_file_path, as_attachment=True, download_name=merged_filename)
     
-    # Store file paths in the session
-    session['file_paths'] = file_paths
-    
-    return redirect(url_for('merge_files'))
+    except Exception as e:
+        # Clean up on error
+        for file_path in file_paths:
+            try:
+                os.remove(file_path)
+            except:
+                pass
+        return f"Error merging PDFs: {str(e)}", 500
 
 @app.route('/merge', methods=['GET'])
 def merge_files():

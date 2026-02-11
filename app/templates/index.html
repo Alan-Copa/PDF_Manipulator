@@ -13,15 +13,34 @@
     <div class="card">
       <h2>PDF Operations</h2>
       <div class="card-content">
-        <section class="grid-item">
+        <section class="grid-item merge-section">
           <h3>Merge PDFs</h3>
-          <form id="form" action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="files" id="files" multiple required>
-            <input type="submit" value="Merge">
-            <div id="progress-wrapper">
-              <div id="progress-bar">0%</div>
+          <div class="merge-container">
+            <!-- File Upload Area -->
+            <div class="upload-area" id="upload-area">
+              <div class="upload-icon">📄</div>
+              <p>Drag & Drop PDF files here</p>
+              <p class="or-text">or</p>
+              <label for="file-input" class="file-select-btn">Select Files</label>
+              <input type="file" id="file-input" accept=".pdf" multiple style="display: none;">
             </div>
-          </form>
+
+            <!-- File List Display -->
+            <div class="file-list-container" id="file-list-container" style="display: none;">
+              <div class="file-list-header">
+                <h4>Files to Merge (Drag to reorder)</h4>
+                <button type="button" class="clear-all-btn" id="clear-all-btn">Clear All</button>
+              </div>
+              <ul class="file-list" id="file-list"></ul>
+              <div class="merge-actions">
+                <button type="button" class="add-more-btn" id="add-more-btn">+ Add More Files</button>
+                <button type="button" class="merge-btn" id="merge-btn">Merge PDFs</button>
+              </div>
+              <div id="progress-wrapper">
+                <div id="progress-bar">0%</div>
+              </div>
+            </div>
+          </div>
         </section>
         <section class="grid-item">
           <h3>Divide PDFs</h3>
