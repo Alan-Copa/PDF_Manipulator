@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Censor PDF - PDF Tools</title>
+  <link rel="stylesheet" href="../static/css/style_main.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon">📄</span>
+        <span class="brand-name">PDF Tools</span>
+      </a>
+      <a href="/" class="nav-back">← Back to Home</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container-large">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-icon">🔒</div>
+        <h1 class="page-title">Censor PDF</h1>
+        <p class="page-description">Permanently redact sensitive information from your documents</p>
+        <div class="alert alert-info">
+          <strong>⚠️ Important:</strong> Redaction is permanent and cannot be undone. Content will be completely removed from the PDF.
+        </div>
+      </div>
+
+      <!-- Censor Interface -->
+      <div class="tool-workspace">
+        <!-- Step 1: Upload PDF -->
+        <div class="censor-upload-area" id="censor-upload-area">
+          <div class="upload-icon">🔒</div>
+          <h3>Upload PDF to Censor</h3>
+          <p class="upload-hint">Secure & Permanent Redaction</p>
+          <label for="censor-file-input" class="btn btn-primary">Choose PDF</label>
+          <input type="file" id="censor-file-input" accept=".pdf" style="display: none;">
+        </div>
+
+        <!-- Step 2: Censoring Workspace -->
+        <div class="censor-workspace" id="censor-workspace" style="display: none;">
+          <!-- Top Controls Bar -->
+          <div class="censor-header">
+            <div class="file-info">
+              <h3 id="censor-filename">document.pdf</h3>
+              <span class="page-indicator">
+                Page <span id="current-page-num">1</span> of <span id="total-pages-num">1</span>
+              </span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" id="change-censor-file">Change File</button>
+          </div>
+
+          <div class="censor-main">
+            <!-- Left Sidebar: Tools Panel -->
+            <aside class="censor-sidebar">
+              <div class="tool-section">
+                <h4>📐 Drawing Tools</h4>
+                <div class="tool-buttons">
+                  <button type="button" class="tool-btn active" id="draw-rectangle-btn" data-tool="rectangle">
+                    <span class="tool-icon">▭</span>
+                    Rectangle
+                  </button>
+                  <button type="button" class="tool-btn" id="select-tool-btn" data-tool="select">
+                    <span class="tool-icon">↖</span>
+                    Select
+                  </button>
+                  <button type="button" class="tool-btn danger" id="clear-selection-btn">
+                    <span class="tool-icon">🗑️</span>
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h4>🔍 Text Search</h4>
+                <div class="search-controls">
+                  <input type="text" id="censor-search-input" placeholder="Search text..." class="form-input">
+                  <button type="button" class="btn btn-secondary btn-sm btn-block" id="search-and-mark-btn">
+                    Find & Mark
+                  </button>
+                  <span class="search-results" id="search-result-count"></span>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h4>⚙️ Options</h4>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="remove-metadata-checkbox" checked>
+                  <span>Remove PDF Metadata</span>
+                </label>
+                <div class="select-group">
+                  <label>Redaction Color</label>
+                  <select id="redaction-color-select" class="form-select">
+                    <option value="0,0,0" selected>⬛ Black</option>
+                    <option value="255,255,255">⬜ White</option>
+                    <option value="128,128,128">🔲 Gray</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h4>📋 Summary</h4>
+                <div class="stats-card">
+                  <div class="stat-item">
+                    <span class="stat-label">Areas marked:</span>
+                    <span class="stat-value" id="redaction-count">0</span>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Main Canvas Area -->
+            <div class="censor-canvas-area">
+              <div class="canvas-navigation">
+                <button type="button" class="btn btn-secondary btn-icon" id="prev-page-btn" disabled>
+                  ← Previous
+                </button>
+                <button type="button" class="btn btn-secondary btn-icon" id="next-page-btn">
+                  Next →
+                </button>
+              </div>
+              
+              <div class="canvas-wrapper" id="canvas-wrapper">
+                <canvas id="censor-canvas"></canvas>
+                <div class="canvas-overlay" id="canvas-overlay"></div>
+              </div>
+
+              <div class="zoom-controls">
+                <button type="button" class="zoom-btn" id="zoom-out-btn">−</button>
+                <span id="zoom-level">100%</span>
+                <button type="button" class="zoom-btn" id="zoom-in-btn">+</button>
+                <button type="button" class="zoom-btn" id="zoom-fit-btn">Fit</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="action-bar-footer">
+            <button type="button" class="btn btn-secondary" id="preview-redaction-btn">
+              👁️ Preview
+            </button>
+            <button type="button" class="btn btn-secondary" id="cancel-censor-btn">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-danger btn-large" id="execute-censor-btn">
+              🔒 Apply Permanent Censoring
+            </button>
+          </div>
+
+          <!-- Progress Bar -->
+          <div id="censor-progress-wrapper" style="display: none;">
+            <div class="progress-bar">
+              <div class="progress-fill" id="censor-progress-fill"></div>
+            </div>
+            <p class="progress-text">Processing redactions...</p>
+          </div>
+        </div>
+
+        <!-- Step 3: Download Result -->
+        <div class="censor-result" id="censor-result" style="display: none;">
+          <div class="success-card">
+            <div class="success-icon">✅</div>
+            <h2>PDF Successfully Censored!</h2>
+            <div class="result-stats">
+              <div class="result-stat">
+                <strong>Redacted Areas:</strong>
+                <span id="result-redaction-count">0</span>
+              </div>
+              <div class="result-stat">
+                <strong>Security:</strong>
+                <span>Content permanently removed</span>
+              </div>
+            </div>
+            <div class="result-actions">
+              <a id="download-censored-link" class="btn btn-primary btn-large" download>
+                ⬇️ Download Censored PDF
+              </a>
+              <button type="button" class="btn btn-secondary" id="censor-another-btn">
+                Censor Another PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instructions -->
+      <div class="info-section">
+        <h3>How to Use the Censor Tool</h3>
+        <ol class="steps-list">
+          <li><strong>Upload your PDF:</strong> Select the document you want to redact</li>
+          <li><strong>Mark sensitive areas:</strong> Use the rectangle tool to draw over text or images you want to remove</li>
+          <li><strong>Search & mark:</strong> Use text search to automatically find and mark specific words or phrases</li>
+          <li><strong>Preview:</strong> Review your redactions before applying them</li>
+          <li><strong>Apply censoring:</strong> Click "Apply Permanent Censoring" to irreversibly remove the content</li>
+          <li><strong>Download:</strong> Save your censored PDF</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+
+  <script src="../static/js/censor.js"></script>
+</body>
+</html>

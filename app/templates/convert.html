@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convert Images to PDF - PDF Tools</title>
+  <link rel="stylesheet" href="../static/css/style_main.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon">📄</span>
+        <span class="brand-name">PDF Tools</span>
+      </a>
+      <a href="/" class="nav-back">← Back to Home</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container-small">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-icon">🖼️</div>
+        <h1 class="page-title">Convert Images to PDF</h1>
+        <p class="page-description">Transform JPG, PNG, and other images into PDF documents</p>
+      </div>
+
+      <!-- Convert Interface -->
+      <div class="tool-workspace">
+        <form id="convert-form" action="/convert/execute" method="post" enctype="multipart/form-data">
+          <!-- File Upload Area -->
+          <div class="convert-upload-area" id="convert-upload-area">
+            <div class="upload-icon">🖼️</div>
+            <h3>Select images to convert</h3>
+            <p class="format-hint">Supported formats: JPG, PNG, BMP, GIF</p>
+            <p class="upload-hint">or</p>
+            <label for="convert-file-input" class="btn btn-primary">Choose Images</label>
+            <input type="file" name="files" id="convert-file-input" accept=".jpg,.jpeg,.png,.bmp,.gif" multiple required style="display: none;">
+            <p class="upload-info">You can select multiple images</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-large btn-block" id="convert-submit-btn" style="display: none;">
+            🔄 Convert to PDF
+          </button>
+
+          <div id="convert-progress-wrapper" style="display: none;">
+            <div class="progress-bar">
+              <div class="progress-fill" id="convert-progress-fill"></div>
+            </div>
+            <p class="progress-text">Converting images...</p>
+          </div>
+        </form>
+      </div>
+
+      <!-- How it Works -->
+      <div class="info-section">
+        <h3>How it works</h3>
+        <ol class="steps-list">
+          <li>Select one or more image files</li>
+          <li>Click "Convert to PDF" to process them</li>
+          <li>Download your new PDF document</li>
+        </ol>
+        <div class="info-card">
+          <h4>💡 Tip</h4>
+          <p>Multiple images will be combined into a single PDF with each image on its own page.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../static/js/convert.js"></script>
+</body>
+</html>

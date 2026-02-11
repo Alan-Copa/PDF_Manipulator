@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merge PDFs - PDF Tools</title>
+  <link rel="stylesheet" href="../static/css/style_main.css">
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="/" class="nav-brand">
+        <span class="brand-icon">📄</span>
+        <span class="brand-name">PDF Tools</span>
+      </a>
+      <a href="/" class="nav-back">← Back to Home</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <div class="container-small">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-icon">📑</div>
+        <h1 class="page-title">Merge PDFs</h1>
+        <p class="page-description">Combine multiple PDF files into one document</p>
+      </div>
+
+      <!-- Merge Interface -->
+      <div class="tool-workspace">
+        <!-- File Upload Area -->
+        <div class="upload-area" id="upload-area">
+          <div class="upload-icon">📄</div>
+          <h3>Drag & Drop PDF files here</h3>
+          <p class="upload-hint">or</p>
+          <label for="file-input" class="btn btn-primary">Select Files</label>
+          <input type="file" id="file-input" accept=".pdf" multiple style="display: none;">
+          <p class="upload-info">You can upload multiple PDF files at once</p>
+        </div>
+
+        <!-- File List Display -->
+        <div class="file-list-container" id="file-list-container" style="display: none;">
+          <div class="file-list-header">
+            <h3>Files to Merge</h3>
+            <p class="hint-text">Drag files to reorder them</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="clear-all-btn">Clear All</button>
+          </div>
+          <ul class="file-list" id="file-list"></ul>
+          <div class="action-bar">
+            <button type="button" class="btn btn-secondary" id="add-more-btn">+ Add More Files</button>
+            <button type="button" class="btn btn-primary btn-large" id="merge-btn">Merge PDFs</button>
+          </div>
+          <div id="progress-wrapper" style="display: none;">
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+            <p class="progress-text" id="progress-text">Merging PDFs...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- How it Works -->
+      <div class="info-section">
+        <h3>How it works</h3>
+        <ol class="steps-list">
+          <li>Upload two or more PDF files</li>
+          <li>Arrange them in your desired order by dragging</li>
+          <li>Click "Merge PDFs" to combine them</li>
+          <li>Download your merged document</li>
+        </ol>
+      </div>
+    </div>
+  </main>
+
+  <script src="../static/js/merge.js"></script>
+</body>
+</html>

@@ -4,6 +4,8 @@ import fitz  # PyMuPDF for secure redaction
 import os
 from werkzeug.utils import secure_filename
 import json
+from PIL import Image
+import img2pdf
 
 app = Flask(__name__)
     
@@ -14,12 +16,14 @@ app.config['UPLOAD_FOLDER'] = 'database/uploads/'
 app.config['MERGED_FOLDER'] = 'database/merged/'
 app.config['SPLIT_FOLDER'] = 'database/split/'
 app.config['CENSORED_FOLDER'] = 'database/censored/'
+app.config['CONVERTED_FOLDER'] = 'database/converted/'
 app.config['COUNTER_FILE'] = 'database/merge_counter.txt'
 
 # Ensure upload, merged, split, and censored directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['MERGED_FOLDER'], exist_ok=True)
 os.makedirs(app.config['SPLIT_FOLDER'], exist_ok=True)
+os.makedirs(app.config['CONVERTED_FOLDER'], exist_ok=True)
 os.makedirs(app.config['CENSORED_FOLDER'], exist_ok=True)
 
 # Initialize or load the merge counter
@@ -140,8 +144,119 @@ def split_pdf_by_interval(pdf_path, output_folder, base_name, interval):
 
 @app.route('/')
 def index():
-    """Render the index.html template."""
-    return render_template('index.html')
+    """Render the home page with clean navigation."""
+    return render_template('home.html')
+
+@app.route('/merge')
+def merge_page():
+    """Render the merge PDF page."""
+    return render_template('merge.html')
+
+@app.route('/split')
+def split_page():
+    """Render the split PDF page."""
+    return render_template('split.html')
+
+@app.route('/convert')
+def convert_page():
+    """Render the convert images to PDF page."""
+    return render_template('convert.html')
+
+@app.route('/censor')
+def censor_page():
+    """Render the censor PDF page."""
+    return render_template('censor.html')
+
+@app.route('/extract')
+def extract_page():
+    """Render the extract pages page."""
+    return render_template('index.html')  # TODO: Create dedicated page
+
+@app.route('/remove')
+def remove_page():
+    """Render the remove pages page."""
+    return render_template('index.html')  # TODO: Create dedicated page
+
+@app.route('/rotate')
+def rotate_page():
+    """Render the rotate PDF page."""
+    return render_template('index.html')  # TODO: Create dedicated page
+
+@app.route('/protect')
+def protect_page():
+    """Render the protect PDF page."""
+    return render_template('index.html')  # TODO: Create dedicated page
+
+@app.route('/unlock')
+def unlock_page():
+    """Render the unlock PDF page."""
+    return render_template('index.html')  # TODO: Create dedicated page
+
+@app.route('/convert/execute', methods=['POST'])
+def convert_images_to_pdf():
+    """Convert uploaded images to PDF."""
+    try:
+        uploaded_files = request.files.getlist('files')
+        if not uploaded_files:
+            return "No files uploaded", 400
+        
+        image_paths = []
+        
+        # Save uploaded images
+        for file in uploaded_files:
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                
+                # Verify it's an image
+                try:
+                    with Image.open(file_path) as img:
+                        # Convert to RGB if necessary (for PNG with transparency, etc.)
+                        if img.mode not in ('RGB', 'L'):
+                            img = img.convert('RGB')
+                            # Save as temporary file if conversion was needed
+                            temp_path = file_path + '_temp.jpg'
+                            img.save(temp_path, 'JPEG')
+                            image_paths.append(temp_path)
+                            os.remove(file_path)
+                        else:
+                            image_paths.append(file_path)
+                except Exception as e:
+                    # Clean up on error
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                    continue
+        
+        if not image_paths:
+            return "No valid image files uploaded", 400
+        
+        # Generate output filename
+        output_filename = 'converted_images.pdf'
+        output_path = os.path.join(app.config['CONVERTED_FOLDER'], output_filename)
+        
+        # Convert images to PDF
+        with open(output_path, 'wb') as f:
+            f.write(img2pdf.convert(image_paths))
+        
+        # Clean up uploaded images
+        for image_path in image_paths:
+            try:
+                os.remove(image_path)
+            except:
+                pass
+        
+        # Return the PDF file
+        return send_file(output_path, as_attachment=True, download_name=output_filename)
+    
+    except Exception as e:
+        # Clean up on error
+        for image_path in image_paths:
+            try:
+                os.remove(image_path)
+            except:
+                pass
+        return f"Error converting images: {str(e)}", 500
 
 @app.route('/upload', methods=['POST'])
 def upload_files():
