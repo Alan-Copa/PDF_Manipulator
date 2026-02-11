@@ -655,11 +655,8 @@ def censor_execute():
                 )
             
             # Apply all redactions on this page (permanently removes content)
-            page.apply_redactions(
-                images=fitz.PDF_REDACT_IMAGE_REMOVE,  # Remove images in redacted areas
-                graphics=fitz.PDF_REDACT_LINE_REMOVE,  # Remove graphics
-                text=fitz.PDF_REDACT_TEXT_REMOVE      # Remove text
-            )
+            # Using simple apply_redactions() which removes all content by default
+            page.apply_redactions()
         
         # Remove metadata if requested
         if remove_metadata:
