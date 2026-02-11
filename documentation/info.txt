@@ -17,3 +17,35 @@ Finally, it returns the merged PDF for download.
 HTML Form:
 
 The form allows users to upload multiple PDF files.
+
+=== ENHANCED MERGE FEATURE (Feb 2026) ===
+
+User Control & Flexibility:
+- Upload multiple PDFs at once or add one at a time
+- Drag & drop files onto upload area
+- Add more files anytime during the process
+
+Order Management:
+- Drag and drop files to reorder (maintains merge sequence)
+- Visual numbering (1, 2, 3...) shows exact merge order
+- Drag handle (☰) on each file for easy reordering
+
+File Management:
+- Remove individual files with × button
+- "Clear All" button to reset
+- Displays file name and size for each PDF
+- Minimum 2 files required to merge
+
+UI/UX Improvements:
+- Modern drag-and-drop interface
+- Real-time progress bar
+- Visual feedback during drag operations
+- Scrollable file list with custom styling
+- Smooth animations and transitions
+- Auto-cleanup and reset after successful merge
+
+Technical Implementation:
+- JavaScript handles drag-and-drop reordering client-side
+- Files sent to backend in user-specified order
+- Backend merges PDFs sequentially per file order
+- Automatic cleanup of temporary uploaded files
