@@ -26,6 +26,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const ctx = canvas ? canvas.getContext('2d') : null;
   const canvasOverlay = document.getElementById('canvas-overlay');
   
+  // Debug: Check if elements are found
+  console.log('DOM Elements Check:', {
+    censorFileInput: !!censorFileInput,
+    censorUploadArea: !!censorUploadArea,
+    canvas: !!canvas
+  });
+  
   const censorFilenameEl = document.getElementById('censor-filename');
   const currentPageNumEl = document.getElementById('current-page-num');
   const totalPagesNumEl = document.getElementById('total-pages-num');
@@ -62,15 +69,21 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // ============ FILE UPLOAD ============
   if (censorFileInput) {
+    console.log('File input found, attaching event listener');
     censorFileInput.addEventListener('change', function() {
+      console.log('File input changed, files:', this.files.length);
       if (this.files.length > 0) {
+        console.log('Calling uploadPDF with file:', this.files[0].name);
         uploadPDF(this.files[0]);
       }
     });
+  } else {
+    console.error('censor-file-input element not found!');
   }
   
   // Drag and drop for upload area
   if (censorUploadArea) {
+    console.log('Upload area found, attaching drag and drop listeners');
     censorUploadArea.addEventListener('dragover', (e) => {
       e.preventDefault();
       censorUploadArea.classList.add('drag-over');
@@ -82,29 +95,39 @@ document.addEventListener('DOMContentLoaded', function() {
     
     censorUploadArea.addEventListener('drop', (e) => {
       e.preventDefault();
+      console.log('File dropped:', e.dataTransfer.files.length, 'files');
       censorUploadArea.classList.remove('drag-over');
       if (e.dataTransfer.files.length > 0) {
+        console.log('Calling uploadPDF from drop');
         uploadPDF(e.dataTransfer.files[0]);
       }
     });
+  } else {
+    console.error('censor-upload-area element not found!');
   }
   
   async function uploadPDF(file) {
+    console.log('uploadPDF called with file:', file);
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
       alert('Please select a valid PDF file');
+      console.error('File validation failed:', file);
       return;
     }
     
+    console.log('File validation passed, creating FormData');
     const formData = new FormData();
     formData.append('file', file);
     
     try {
+      console.log('Sending fetch request to /censor/upload');
       const response = await fetch('/censor/upload', {
         method: 'POST',
         body: formData
       });
       
+      console.log('Received response:', response.status);
       const data = await response.json();
+      console.log('Response data:', data);
       
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Upload failed');
@@ -218,7 +241,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     canvas.addEventListener('mousemove', function(e) {
-      if (!isDrawing || currentTool !== 'rectangle') return;\n      
+      if (!isDrawing || currentTool !== 'rectangle') return;
+      
       const rect = canvas.getBoundingClientRect();
       // Account for zoom level when getting coordinates
       const currentX = (e.clientX - rect.left) / zoomLevel;
